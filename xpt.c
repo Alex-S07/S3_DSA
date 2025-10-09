@@ -3,126 +3,85 @@
 #include <ctype.h>
 #include <string.h>
 
-struct Node {
-    char value[50];
-    struct Node *left, *right;
-};
-
-struct Node *stack[100];
+#define MAX 100
+char stack[MAX];
 int top = -1;
-
-void push(struct Node *n) { stack[++top] = n; }
-struct Node* pop() { return stack[top--]; }
-struct Node* peek() { return stack[top]; }
-
-struct Node* createNode(char *val) {
-    struct Node* n = malloc(sizeof(struct Node));
-    strcpy(n->value, val);
-    n->left = n->right = NULL;
-    return n;
-}
-
+void push(char ch) {
+    stack[++top] = ch;}
+char pop() {
+    return stack[top--];}
+char peek() {
+    return stack[top];}
+int isEmpty() {
+    return top == -1;}
 int precedence(char op) {
-    if (op == '+' || op == '-') return 1;
-    if (op == '*' || op == '/') return 2;
-    if (op == '^') return 3;
-    return 0;
-}
-
-void buildTree(char expr[]) {
-    struct Node *opStack[100];
-    int opTop = -1;
-
-    for (int i = 0; i < strlen(expr); i++) {
-        if (isspace(expr[i])) continue;
-
-        if (isalnum(expr[i])) {
-            char token[50];
-            int j = 0;
-            while (i < strlen(expr) && isalnum(expr[i]))
-                token[j++] = expr[i++];
-            token[j] = '\0';
-            i--;
-            push(createNode(token));
-        }
-
-        else if (expr[i] == '(') {
-            char token[2] = "(";
-            opStack[++opTop] = createNode(token);
-        }
-
-        else if (expr[i] == ')') {
-            while (opTop >= 0 && strcmp(opStack[opTop]->value, "(") != 0) {
-                struct Node* op = opStack[opTop--];
-                op->right = pop();
-                op->left = pop();
-                push(op);
-            }
-            opTop--; // pop '('
-        }
-
-        else {
-            while (opTop >= 0 && precedence(opStack[opTop]->value[0]) >= precedence(expr[i])) {
-                struct Node* op = opStack[opTop--];
-                op->right = pop();
-                op->left = pop();
-                push(op);
-            }
-            char token[2] = { expr[i], '\0' };
-            opStack[++opTop] = createNode(token);
-        }
-    }
-
-    while (opTop >= 0) {
-        struct Node* op = opStack[opTop--];
-        op->right = pop();
-        op->left = pop();
-        push(op);
-    }
-}
-
-void printPrefix(struct Node *r) {
-    if (!r) return;
-    printf("%s ", r->value);
-    printPrefix(r->left);
-    printPrefix(r->right);
-}
-
-void printPostfix(struct Node *r) {
-    if (!r) return;
-    printPostfix(r->left);
-    printPostfix(r->right);
-    printf("%s ", r->value);
-}
-
+    switch(op) {
+        case '+':
+        case '-': return 1;
+        case '*':
+        case '/': return 2;
+        case '^': return 3;
+        default: return 0;}}
+int isOperator(char ch) {
+    return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '^';}
+void infixToPostfix(char* infix, char* postfix) {
+    int i = 0, j = 0;
+    char ch;
+    while ((ch = infix[i++]) != '\0') {
+        if (isspace(ch)) continue;
+        if (isalnum(ch)) {
+            postfix[j++] = ch;
+        } else if (ch == '(') {
+            push(ch);
+        } else if (ch == ')') {
+            while (!isEmpty() && peek() != '(')
+                postfix[j++] = pop();
+            pop(); // discard '('
+        } else if (isOperator(ch)) {
+            while (!isEmpty() && precedence(peek()) >= precedence(ch))
+                postfix[j++] = pop();
+            push(ch);}}
+    while (!isEmpty())
+        postfix[j++] = pop();
+    postfix[j] = '\0';}
+typedef struct Node {
+    char data;
+    struct Node* left;
+    struct Node* right;
+} Node;
+Node* treeStack[MAX];
+int treeTop = -1;
+void pushTree(Node* node) {
+    treeStack[++treeTop] = node;}
+Node* popTree() {
+    return treeStack[treeTop--];}
+Node* buildExpTree(char* postfix) {
+    int i = 0;
+    char ch;
+    while ((ch = postfix[i++]) != '\0') {
+        Node* newNode = (Node*)malloc(sizeof(Node));
+        newNode->data = ch;
+        newNode->left = newNode->right = NULL;
+        if (isOperator(ch)) {
+            newNode->right = popTree();
+            newNode->left = popTree();}
+        pushTree(newNode);}
+    return popTree();}
+void preorder(Node* root) {
+    if (root) {
+        printf("%c ", root->data);
+        preorder(root->left);
+        preorder(root->right);}}
 int main() {
-    char expr[100];
-    int choice;
-
+    char infix[MAX], postfix[MAX];
     printf("Enter infix expression: ");
-    fgets(expr, sizeof(expr), stdin);
-    expr[strcspn(expr, "\n")] = 0;
-
-    buildTree(expr);
-
-    while (1) {
-        printf("\n1. Prefix\n2. Postfix\n3. Exit\nChoice: ");
-        scanf("%d", &choice);
-
-        if (choice == 1) {
-            printf("\nPrefix: ");
-            printPrefix(peek());
-            printf("\n");
-        } else if (choice == 2) {
-            printf("\nPostfix: ");
-            printPostfix(peek());
-            printf("\n");
-        } else if (choice == 3) {
-            printf("Exiting...\n");
-            break;
-        } else {
-            printf("Invalid choice!\n");
-        }
-    }
+    fgets(infix, MAX, stdin);
+    infix[strcspn(infix, "\n")] = '\0';
+    infixToPostfix(infix, postfix);
+    printf("Postfix expression: %s\n", postfix);
+    Node* root = buildExpTree(postfix);
+    printf("Preorder traversal: ");
+    preorder(root);
+    printf("\n");
     return 0;
 }
