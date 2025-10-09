@@ -1,87 +1,67 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
-#include <string.h>
 
-#define MAX 100
-char stack[MAX];
-int top = -1;
-void push(char ch) {
-    stack[++top] = ch;}
-char pop() {
-    return stack[top--];}
-char peek() {
-    return stack[top];}
-int isEmpty() {
-    return top == -1;}
-int precedence(char op) {
-    switch(op) {
-        case '+':
-        case '-': return 1;
-        case '*':
-        case '/': return 2;
-        case '^': return 3;
-        default: return 0;}}
-int isOperator(char ch) {
-    return ch == '+' || ch == '-' || ch == '*' || ch == '/' || ch == '^';}
-void infixToPostfix(char* infix, char* postfix) {
-    int i = 0, j = 0;
-    char ch;
-    while ((ch = infix[i++]) != '\0') {
-        if (isspace(ch)) continue;
-        if (isalnum(ch)) {
-            postfix[j++] = ch;
-        } else if (ch == '(') {
-            push(ch);
-        } else if (ch == ')') {
-            while (!isEmpty() && peek() != '(')
-                postfix[j++] = pop();
-            pop(); // discard '('
-        } else if (isOperator(ch)) {
-            while (!isEmpty() && precedence(peek()) >= precedence(ch))
-                postfix[j++] = pop();
-            push(ch);}}
-    while (!isEmpty())
-        postfix[j++] = pop();
-    postfix[j] = '\0';}
-typedef struct Node {
-    char data;
-    struct Node* left;
-    struct Node* right;
-} Node;
-Node* treeStack[MAX];
-int treeTop = -1;
-void pushTree(Node* node) {
-    treeStack[++treeTop] = node;}
-Node* popTree() {
-    return treeStack[treeTop--];}
-Node* buildExpTree(char* postfix) {
-    int i = 0;
-    char ch;
-    while ((ch = postfix[i++]) != '\0') {
-        Node* newNode = (Node*)malloc(sizeof(Node));
-        newNode->data = ch;
-        newNode->left = newNode->right = NULL;
-        if (isOperator(ch)) {
-            newNode->right = popTree();
-            newNode->left = popTree();}
-        pushTree(newNode);}
-    return popTree();}
-void preorder(Node* root) {
-    if (root) {
-        printf("%c ", root->data);
-        preorder(root->left);
-        preorder(root->right);}}
-int main() {
-    char infix[MAX], postfix[MAX];
-    printf("Enter infix expression: ");
-    fgets(infix, MAX, stdin);
-    infix[strcspn(infix, "\n")] = '\0';
-    infixToPostfix(infix, postfix);
-    printf("Postfix expression: %s\n", postfix);
-    Node* root = buildExpTree(postfix);
-    printf("Preorder traversal: ");
-    preorder(root);
+#define MAX 10  // maximum number of vertices
+
+int queue[MAX];
+int front = -1, rear = -1;
+
+// Function to add an element to the queue
+void enqueue(int vertex) {
+    if (rear == MAX - 1)
+        printf("Queue Overflow\n");
+    else {
+        if (front == -1)
+            front = 0;
+        queue[++rear] = vertex;
+    }
+}
+
+// Function to remove an element from the queue
+int dequeue() {
+    if (front == -1 || front > rear)
+        return -1;
+    return queue[front++];
+}
+
+// BFS function
+void BFS(int adj[MAX][MAX], int visited[MAX], int start, int n) {
+    int i, current;
+    
+    enqueue(start);
+    visited[start] = 1;
+
+    printf("BFS Traversal: ");
+
+    while (front <= rear) {
+        current = dequeue();
+        printf("%d ", current);
+
+        for (i = 0; i < n; i++) {
+            if (adj[current][i] == 1 && visited[i] == 0) {
+                enqueue(i);
+                visited[i] = 1;
+            }
+        }
+    }
     printf("\n");
+}
+int main() {
+    int n, i, j, start;
+    int adj[MAX][MAX];
+    int visited[MAX] = {0};
+
+    printf("Enter number of vertices: ");
+    scanf("%d", &n);
+
+    printf("Enter adjacency matrix:\n");
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++)
+            scanf("%d", &adj[i][j]);
+
+    printf("Enter starting vertex (0 to %d): ", n - 1);
+    scanf("%d", &start);
+
+    BFS(adj, visited, start, n);
+
     return 0;
 }
